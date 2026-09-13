@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>孙筱 · 动态设计 — 动态表盘与动画</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --card: #ffffff;
+    --ink: #1c1c1e;
+    --muted: #6b6b70;
+    --line: #e6e6e3;
+    --accent: #1c1c1e;
+    --wash: #f0efec;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 16px 22px;
+    background: rgba(247,247,245,0.88);
+    backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; flex-direction: column; line-height: 1.25; }
+  .brand b { font-size: 17px; letter-spacing: 0.5px; }
+  .brand span { font-size: 12px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .nav { display: flex; align-items: center; gap: 10px; }
+  .nav a.back {
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+  }
+  .nav a.back:hover { color: var(--ink); border-color: #d8d8d4; }
+  .nav a.dl {
+    appearance: none; border: 1px solid var(--accent); background: var(--accent); color: #fff;
+    padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    text-decoration: none; white-space: nowrap; transition: opacity .12s ease, transform .12s ease;
+  }
+  .nav a.dl:hover { opacity: .88; transform: translateY(-1px); }
+  main { max-width: 1000px; margin: 0 auto; padding: 34px 18px 60px; }
+
+  .intro { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 34px; }
+  .intro h1 { font-size: 30px; margin: 0 0 10px; letter-spacing: 1px; }
+  .intro p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
+  .intro .tags { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .intro .tags i {
+    font-style: normal; font-size: 12px; color: #4a4a4f;
+    background: var(--wash); border-radius: 999px; padding: 5px 11px;
+  }
+
+  section { margin-bottom: 46px; }
+  h2.sec { font-size: 19px; margin: 0 0 6px; letter-spacing: .5px; }
+  h2.sec em { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 10px; letter-spacing: 0; }
+  .lead { margin: 0 0 20px; color: var(--muted); font-size: 13.5px; line-height: 1.8; }
+
+  ul.wf-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px;
+               grid-template-columns: repeat(3, 1fr); }
+  ul.wf-grid li {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    overflow: hidden; box-shadow: 0 6px 22px rgba(0,0,0,0.05);
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  ul.wf-grid li:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.09); }
+  ul.wf-grid img { display: block; width: 100%; height: auto; background: #eceae6; }
+  .wf-meta { padding: 13px 15px 15px; border-top: 1px solid var(--line); }
+  .wf-meta b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+  .wf-meta span { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  ul.vid-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px; }
+  ul.vid-grid li {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    overflow: hidden; box-shadow: 0 6px 22px rgba(0,0,0,0.05);
+  }
+  ul.vid-grid video {
+    display: block; width: 100%; height: auto; background: #111;
+    aspect-ratio: 16 / 9; object-fit: contain;
+  }
+  .vid-meta { padding: 16px 18px 18px; border-top: 1px solid var(--line); }
+  .vid-meta .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .vid-meta b { font-size: 16px; }
+  .vid-meta .spec { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .vid-meta p { margin: 9px 0 0; font-size: 13.5px; color: #4a4a4f; line-height: 1.8; }
+  .vid-meta .act { margin-top: 12px; }
+  .vid-meta .act a {
+    font-size: 12.5px; color: #4a4a4f; text-decoration: none;
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px;
+    background: var(--wash); display: inline-block;
+  }
+  .vid-meta .act a:hover { color: var(--ink); border-color: #d8d8d4; background: #fff; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 26px 18px 40px; border-top: 1px solid var(--line); }
+
+  @media (max-width: 820px) { ul.wf-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) {
+    header { padding: 12px 14px; }
+    .brand b { font-size: 15px; }
+    .brand span { font-size: 10.5px; }
+    .nav a.dl { padding: 8px 12px; font-size: 12px; }
+    .nav a.back { display: none; }
+    main { padding: 22px 14px 46px; }
+    .intro h1 { font-size: 23px; }
+    ul.wf-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .wf-meta { padding: 10px 11px 12px; }
+    .wf-meta b { font-size: 13px; }
+    .wf-meta span { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <b>孙筱 · 动态设计</b>
+      <span>Motion &amp; Animation</span>
+    </div>
+    <div class="nav">
+      <a class="back" href="index.html">← 返回作品集</a>
+      <a class="dl" href="https://github.com/741277667/portfolio/releases/download/v1.0/portfolio.pdf" target="_blank" rel="noopener">下载原版 PDF</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="intro">
+      <h1>动态设计</h1>
+      <p>智能手表动态表盘 6 款 · 动画作品 3 支。表盘以 GIF 动效呈现，动画可直接在页面内播放。</p>
+      <div class="tags">
+        <i>动态表盘设计</i><i>动效设计</i><i>MG 动画</i><i>像素风格</i><i>手绘涂鸦</i>
+      </div>
+    </div>
+
+    <section id="watchfaces">
+      <h2 class="sec">一、智能手表动态表盘 <em>6 款 · 360 × 390</em></h2>
+      <p class="lead">围绕智能手表小尺寸屏幕设计的动态表盘：主视觉之外，时间、日期、星期、天气与电量等信息层与画面风格统一，兼顾可读性与动态表现。</p>
+      <ul class="wf-grid">
+        <li>
+          <img loading="lazy" src="motion/watchfaces/01-冬日小村.gif" alt="冬日小村 动态表盘" />
+          <div class="wf-meta"><b>冬日小村</b><span>雪夜小屋 · 暖黄窗光<br />时间 / 日期 / 星期 / 电量</span></div>
+        </li>
+        <li>
+          <img loading="lazy" src="motion/watchfaces/02-动物聚会.gif" alt="动物聚会 动态表盘" />
+          <div class="wf-meta"><b>动物聚会</b><span>深色糖果底 · 动物群像<br />时间 / 星期 / 电量</span></div>
+        </li>
+        <li>
+          <img loading="lazy" src="motion/watchfaces/03-卡皮温泉.gif" alt="卡皮温泉 动态表盘" />
+          <div class="wf-meta"><b>卡皮温泉</b><span>水豚泡汤 · 冬日雪景<br />时间 / 日期 / 星期 / 天气</span></div>
+        </li>
+        <li>
+          <img loading="lazy" src="motion/watchfaces/04-甜点狐兔.gif" alt="甜点狐兔 动态表盘" />
+          <div class="wf-meta"><b>甜点狐兔</b><span>像素风医护狐与兔子<br />时间 / 日期 / 星期 / 天气 / 电量</span></div>
+        </li>
+        <li>
+          <img loading="lazy" src="motion/watchfaces/05-贴贴快照.gif" alt="贴贴快照 动态表盘" />
+          <div class="wf-meta"><b>贴贴快照</b><span>拍立得相框 · 猫狗合影<br />时间 / 日期 / 星期 / 电量</span></div>
+        </li>
+        <li>
+          <img loading="lazy" src="motion/watchfaces/06-晚安喵.gif" alt="晚安喵 动态表盘" />
+          <div class="wf-meta"><b>晚安喵</b><span>熟睡猫咪与月亮<br />时间 / 日期 / 星期 / 电量</span></div>
+        </li>
+      </ul>
+    </section>
+
+    <section id="videos">
+      <h2 class="sec">二、动画作品 <em>3 支 · 页面内直接播放</em></h2>
+      <p class="lead">三个方向的动画练习：极简线面、几何抽象与手绘涂鸦。为便于在线播放，页面内为压缩版（原片可下载）。</p>
+      <ul class="vid-grid">
+        <li>
+          <video controls playsinline preload="metadata" poster="motion/posters/gusu-shiniang.jpg" src="motion/videos/gusu-shiniang.mp4"></video>
+          <div class="vid-meta">
+            <div class="row"><b>姑苏十二娘</b><span class="spec">1920 × 1080 · 30 fps · 2′22″ · 有声</span></div>
+            <p>以极简线面为语言的动态设计。浅底之上，几何化的形体随节奏逐段生成、延展与停驻，用最少的形式语言铺陈江南意象。</p>
+            <div class="act"><a href="https://github.com/741277667/portfolio/releases/download/v1.1/gusu-shiniang-original.mp4">下载原片 · 1920 × 1080 · 91.3 MB</a></div>
+          </div>
+        </li>
+        <li>
+          <video controls playsinline preload="metadata" poster="motion/posters/mondrian.jpg" src="motion/videos/mondrian.mp4"></video>
+          <div class="vid-meta">
+            <div class="row"><b>蒙德里安动画练习</b><span class="spec">1980 × 1080 · 30 fps · 16.5″ · 有声</span></div>
+            <p>蒙德里安与新造型主义语言的动效练习：红黄蓝色块在留白中位移、缩放与形变，观察几何抽象在时间维度上的节奏与张力。</p>
+            <div class="act"><a href="https://github.com/741277667/portfolio/releases/download/v1.1/mondrian-original.mp4">下载原片 · 1980 × 1080 · 5.3 MB</a></div>
+          </div>
+        </li>
+        <li>
+          <video controls playsinline preload="metadata" poster="motion/posters/wahaha.jpg" src="motion/videos/wahaha.mp4"></video>
+          <div class="vid-meta">
+            <div class="row"><b>哇哈哈动画</b><span class="spec">3840 × 2160 拍摄 · 30 fps · 30″ · 有声</span></div>
+            <p>单线手绘涂鸦风格的动画：以绿色描线勾勒电脑与浏览器窗口，用轻松的涂鸦笔触演示界面操作流程与交互节奏。</p>
+            <div class="act"><a href="https://github.com/741277667/portfolio/releases/download/v1.1/wahaha-original-4k.mp4">下载原片 · 4K 3840 × 2160 · 117 MB</a></div>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>© 2026 孙筱 · 动态设计 · <a href="index.html" style="color:inherit">返回作品集</a></footer>
+</body>
+</html>
